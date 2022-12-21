@@ -16,10 +16,11 @@ import matplotlib.pylab as pl
 from tqdm import tqdm
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-torch.set_default_tensor_type('torch.FloatTensor')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
-vgg16 = models.vgg16(weights='IMAGENET1K_V1').features
+vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
+
 
 def calc_styles_vgg(imgs):
     style_layers = [1, 6, 11, 18, 25]
@@ -57,7 +58,7 @@ def create_vgg_loss(target_img):
 
 
 def to_nchw(img):
-    img = torch.as_tensor(img)
+    img = torch.as_tensor(img, dtype=torch.double)
     if len(img.shape) == 3:
         img = img[None, ...]
     return img.permute(0, 3, 1, 2)
@@ -75,12 +76,18 @@ def train(image_path: str):
     # target image
     # url = 'https://www.robots.ox.ac.uk/~vgg/data/dtd/thumbs/dotted/dotted_0201.jpg'
     # style_img = imread(url, max_size=128)
-    style_img = imageio.imread(image_path)
-    style_img /= 255
+    style_img = np.array(imageio.imread(image_path))
+    style_img = style_img/255
+    # w, h = style_img.shape 
+    style_img = style_img[:,:style_img.shape[0], :3]
+
 
     with torch.no_grad():
-        loss_f = create_vgg_loss(to_nchw(style_img))
-    imshow(style_img, count=0)
+        style_img = to_nchw(style_img).float()
+        loss_f = create_vgg_loss(style_img)
+
+    viz_img = style_img.cpu().numpy()
+    imshow(np.moveaxis(viz_img[0,:,:], 0,-1), count=0)
 
     # setup training
     ca = CA()
@@ -93,7 +100,7 @@ def train(image_path: str):
     # training loop
     gradient_checkpoints = False  # Set in case of OOM problems
 
-    for i in range(100):
+    for i in range(5000):
         with torch.no_grad():
             batch_idx = np.random.choice(len(pool), 4, replace=False)
             x = pool[batch_idx]
@@ -127,7 +134,7 @@ def train(image_path: str):
           loss: {loss.item()} \
           lr: {lr_sched.get_last_lr()[0]}")
 
-            if i % 100 == 0:
+            if i % 50 == 0:
                 pl.plot(loss_log, '.', alpha=0.1)
                 pl.yscale('log')
                 pl.ylim(np.min(loss_log), loss_log[0])
@@ -137,6 +144,7 @@ def train(image_path: str):
                 imshow(np.hstack(imgs), id='batch', count=i)
 
     print('done training')
+    write_video(ca=ca)
 
 
 def write_video(ca: CA):

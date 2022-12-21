@@ -60,9 +60,7 @@ def im2url(a, fmt='jpeg'):
   return 'data:image/' + fmt.upper() + ';base64,' + base64_byte_string
 
 def imshow(a, fmt='jpeg', id=None, count=0):
-    # plt.imshow(a)
     imageio.imwrite(f"results/sample_{count}_{id}.png", (a*255).astype(np.uint8))
-    # a.show()
     # return display(Image(data=imencode(a, fmt)), display_id=id)
 
 def grab_plot(close=True):
