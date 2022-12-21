@@ -13,6 +13,7 @@ import imageio
 
 import matplotlib.pyplot as plt
 
+
 def imread(url, max_size=None, mode=None):
   if url.startswith(('http:', 'https:')):
     # wikimedia requires a user agent
