@@ -6,7 +6,7 @@ and modularized
 
 from NCA import CA
 import imageio
-from utils import imshow, VideoWriter, grab_plot, zoom
+from utils import imsave, VideoWriter, grab_plot, zoom, AttributeDict
 import torch.nn.functional as F
 import torchvision.models as models
 import torch
@@ -14,6 +14,7 @@ import os
 import numpy as np
 import matplotlib.pylab as pl
 from tqdm import tqdm
+
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
 torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -68,19 +69,22 @@ def to_rgb(x):
     return x[..., :3, :, :]+0.5
 
 
-def train(image_path: str):
+def train(image, paths:AttributeDict):
 
+    if (type(image) == str):
+        style_img = np.array(imageio.imread(image))
+        style_img = style_img/255   
+    elif (str(type(image)) == "<class 'numpy.ndarray'>"):
+        style_img = image
+    else:
+        raise Exception("style image is not a path or numpy array")
+
+    # ensure rectangular    
+    style_img = style_img[:,:style_img.shape[0], :3]
+    
     param_n = sum(p.numel() for p in CA().parameters())
     print('CA param count:', param_n)
-
-    # target image
-    # url = 'https://www.robots.ox.ac.uk/~vgg/data/dtd/thumbs/dotted/dotted_0201.jpg'
-    # style_img = imread(url, max_size=128)
-    style_img = np.array(imageio.imread(image_path))
-    style_img = style_img/255
-    # w, h = style_img.shape
-    style_img = style_img[:,:style_img.shape[0], :3]
-
+    
     with torch.no_grad():
         style_img = to_nchw(style_img).float()
         loss_f = create_vgg_loss(style_img)
@@ -138,9 +142,9 @@ def train(image_path: str):
                 pl.yscale('log')
                 pl.ylim(np.min(loss_log), loss_log[0])
                 pl.tight_layout()
-                imshow(grab_plot(), id='log', count=i)
+                imsave(grab_plot(), id='log', count=i, path=paths.nca_results)
                 imgs = to_rgb(x).permute([0, 2, 3, 1]).cpu()
-                imshow(np.hstack(imgs), id='batch', count=i)
+                imsave(np.hstack(imgs), id='batch', count=i)
 
     print('done training')
     write_video(ca=ca)

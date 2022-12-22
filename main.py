@@ -16,10 +16,13 @@ def set_paths(sound_name):
     "puts all the paths in a dict"
     
     experiment_root = os.path.join("experiments",datetime.now().strftime("%m%d_%H%M%S"))
+    nca_results = os.path.join(experiment_root, "nca_results")
     os.mkdir(experiment_root)
+    os.mkdir(nca_results)
 
     paths = {
         "experiment" : experiment_root,
+        "nca_results" : nca_results,
         "input_wav" : os.path.join("samples", f"{sound_name}.wav"),
         "reconstructed_wav" : os.path.join(experiment_root, f"{sound_name}_reconstruced.wav"),
         "spectrogram" : os.path.join(experiment_root, f"{sound_name}_spect.png"),
@@ -46,7 +49,7 @@ def main():
     transformer = StftTransformer(  n_fft=config.n_fft, 
                                     rate=config.rate, 
                                     audio_array=data, 
-                                    spect_path=paths.spectrogram)
+                                    paths=paths)
 
     # TEST 1: generate spectrogram by image. Do NCA on this
     if (config.experiment == Experiment.RGB):
@@ -54,8 +57,8 @@ def main():
 
     # TEST 2: generate spectrogram by complex values. Do NCA on this
     if (config.experiment == Experiment.COMPLEX):
-        transformer.complex_to_png()
-        train(image_path=paths.complex_coords)
+        complex_numbers = transformer.complex_to_png()
+        train(image=complex_numbers)
 
     # to test if reverse works
     transformer.complex_to_audio(paths.reconstructed_wav) # which saves it

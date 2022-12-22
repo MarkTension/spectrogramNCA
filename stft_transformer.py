@@ -7,7 +7,7 @@ from utils import AttributeDict
 from pydub import AudioSegment
 from pydub.playback import play
 import imageio
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from pickle import dump
 import os
 
@@ -22,7 +22,7 @@ class StftTransformer:
         self.rate = rate
         self.hop_length = n_fft // 4                # hop length standard value
         self.audio_out = None                       # for reconstructed audio
-        self.scaler_real, self.scaler_imag = None   # for scaling the complex numbers
+        self.scaler_real, self.scaler_imag = None, None
 
         # converts audio to complex numbers
         self.complex_coords, self.amplitudes = self._audio_to_complex(audio_array)
@@ -34,7 +34,7 @@ class StftTransformer:
 
         complex_coords = librosa.stft(
             audio_array, hop_length=self.hop_length, window='hann', center=True)  # n_fft=2048,
-        amplitudes = np.abs(self.complex_coords)
+        amplitudes = np.abs(complex_coords)
         return complex_coords, amplitudes
 
     def complex_to_audio(self, outfile_path=None):
@@ -56,7 +56,7 @@ class StftTransformer:
 
 
     def _scale_complex(self, real, imaginary):
-                
+        
         # make reversible scaler
         self.scaler_real = MinMaxScaler()
         self.scaler_imag = MinMaxScaler()
@@ -68,8 +68,8 @@ class StftTransformer:
         imag_scaled = self.scaler_imag.transform(imaginary)
 
         # save scalers for inverse later
-        dump(self.scaler_real, os.path.join(self.experiment_path, "scaler_real.pkl"))
-        dump(self.scaler_imag, os.path.join(self.experiment_path, "scaler_imag.pkl"))
+        dump(self.scaler_real, open(os.path.join(self.experiment_path, "scaler_real.pkl"), 'wb'))
+        dump(self.scaler_imag, open(os.path.join(self.experiment_path, "scaler_imag.pkl"), 'wb'))
 
         return real_scaled, imag_scaled
         
@@ -78,6 +78,9 @@ class StftTransformer:
     def complex_to_png(self):
         """
         saves complex coordinates to png image
+        1. separate real and fake
+        2. scale both independently, and stack
+        3. write to png file
         """
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
 
@@ -87,12 +90,12 @@ class StftTransformer:
         real_scaled, imag_scaled = self._scale_complex(real, imaginary)
         realcomplex = np.stack([real_scaled, imag_scaled, np.ones(real.shape, dtype=np.float)], axis=2)
 
-        # realcomplex = np.abs(realcomplex* 255)
+        # write to file
         imageio.imwrite(uri=self.paths.complex_coords, im=realcomplex)
         imageio.imwrite(uri=os.path.join(self.experiment_path, "real_scaled.png"), im=real_scaled)
         imageio.imwrite(uri=os.path.join(self.experiment_path, "imag_scaled.png"), im=imag_scaled)
         print(f"saved the png files to {self.experiment_path}")
-
+        return realcomplex
 
     def _plot_spectrogram(self, spectrogram_path):
         """ saves spectrogram image """
