@@ -13,24 +13,10 @@ import imageio
 
 import matplotlib.pyplot as plt
 
-
-def imread(url, max_size=None, mode=None):
-  if url.startswith(('http:', 'https:')):
-    # wikimedia requires a user agent
-    headers = {
-      "User-Agent": "Requests in Colab/0.0 (https://colab.research.google.com/; no-reply@google.com) requests/0.0"
-    }
-    r = requests.get(url, headers=headers)
-    f = io.BytesIO(r.content)
-  else:
-    f = url
-  img = PIL.Image.open(f)
-  if max_size is not None:
-    img.thumbnail((max_size, max_size), PIL.Image.ANTIALIAS)
-  if mode is not None:
-    img = img.convert(mode)
-  img = np.float32(img)/255.0
-  return img
+class AttributeDict(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
 def np2pil(a):
   if a.dtype in [np.float32, np.float64]:

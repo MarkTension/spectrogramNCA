@@ -6,7 +6,7 @@ and modularized
 
 from NCA import CA
 import imageio
-from utils import imread, imshow, VideoWriter, grab_plot, zoom
+from utils import imshow, VideoWriter, grab_plot, zoom
 import torch.nn.functional as F
 import torchvision.models as models
 import torch
@@ -78,9 +78,8 @@ def train(image_path: str):
     # style_img = imread(url, max_size=128)
     style_img = np.array(imageio.imread(image_path))
     style_img = style_img/255
-    # w, h = style_img.shape 
+    # w, h = style_img.shape
     style_img = style_img[:,:style_img.shape[0], :3]
-
 
     with torch.no_grad():
         style_img = to_nchw(style_img).float()
