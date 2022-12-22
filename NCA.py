@@ -1,5 +1,7 @@
 import torch
 
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
+
 
 ident = torch.tensor([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]])
 sobel_x = torch.tensor([[-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-1.0, 0.0, 1.0]])

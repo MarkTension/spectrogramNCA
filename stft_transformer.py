@@ -6,7 +6,7 @@ import soundfile as sf
 
 from pydub import AudioSegment
 from pydub.playback import play
-
+import imageio
 
 class StftTransformer:
     """
@@ -45,6 +45,22 @@ class StftTransformer:
         # sets the audio out (array) instance variable from the saved file
         self.audio_out = AudioSegment.from_wav(outfile_path)
 
+    def polar_to_png(self, outfile_path:str):
+        """
+        saves polar coordinates to png image
+        """
+        assert str(type(self.polar_coords)) == "<class 'numpy.ndarray'>"
+
+        # put the real and imaginary numbers into separate dimensions
+        real = np.real(self.polar_coords)
+        imaginary = np.imag(self.polar_coords)
+
+        realcomplex = np.stack([real, imaginary, np.ones(real.shape, dtype=np.float)], axis=2)
+
+        if (outfile_path != None):
+            imageio.imwrite(uri=outfile_path, im=realcomplex)
+            print(f"saved the png file to {outfile_path}")
+
     def plot_spectrogram(self, spectrogram_path):
         fig, ax = plt.subplots()
         img = librosa.display.specshow(librosa.amplitude_to_db(self.amplitudes,
@@ -56,7 +72,7 @@ class StftTransformer:
         fig.subplots_adjust(top=1)
         fig.subplots_adjust(right=1)
         fig.subplots_adjust(left=0)
-        fig.show()
+        # fig.show()
         fig.savefig(spectrogram_path)
 
         # # and also do the same with only the content
