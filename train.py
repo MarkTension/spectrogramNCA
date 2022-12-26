@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
 vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
@@ -90,7 +90,7 @@ def train(image, paths:AttributeDict):
         loss_f = create_vgg_loss(style_img)
 
     viz_img = style_img.cpu().numpy()
-    imshow(np.moveaxis(viz_img[0,:,:], 0,-1), count=0)
+    imsave(np.moveaxis(viz_img[0,:,:], 0,-1), count=0, path=paths.nca_results)
 
     # setup training
     ca = CA()
@@ -144,7 +144,7 @@ def train(image, paths:AttributeDict):
                 pl.tight_layout()
                 imsave(grab_plot(), id='log', count=i, path=paths.nca_results)
                 imgs = to_rgb(x).permute([0, 2, 3, 1]).cpu()
-                imsave(np.hstack(imgs), id='batch', count=i)
+                imsave(np.hstack(imgs), id='batch', count=i, path=paths.nca_results)
 
     print('done training')
     write_video(ca=ca)

@@ -22,7 +22,10 @@ class StftTransformer:
         self.rate = rate
         self.hop_length = n_fft // 4                # hop length standard value
         self.audio_out = None                       # for reconstructed audio
-        self.scaler_real, self.scaler_imag = None, None
+        # self.scaler_real, self.scaler_imag = None, None
+        self.scalers = {}
+        self.minimums = 0 # the min val of the complex numbers
+        self.complex_coords_new = None
 
         # converts audio to complex numbers
         self.complex_coords, self.amplitudes = self._audio_to_complex(audio_array)
@@ -56,26 +59,66 @@ class StftTransformer:
 
 
     def _scale_complex(self, real, imaginary):
-        
-        # make reversible scaler
-        self.scaler_real = MinMaxScaler()
-        self.scaler_imag = MinMaxScaler()
-        
-        self.scaler_real.fit(real)
-        self.scaler_imag.fit(imaginary)
+        """ scales real and imaginary with sklearn scaler """        
+        output = []
+        for name, values in [("real", real), ("imag", imaginary)]:
 
-        real_scaled = self.scaler_real.transform(real)
-        imag_scaled = self.scaler_imag.transform(imaginary)
+            self.scalers[name] = MinMaxScaler()
+            self.scalers[name].fit(values)
+            scaled = self.scalers[name].transform(values)
+            dump(self.scalers[name], open(os.path.join(self.experiment_path, f"scaler_{name}.pkl"), 'wb'))
+            output.append(scaled)
 
-        # save scalers for inverse later
-        dump(self.scaler_real, open(os.path.join(self.experiment_path, "scaler_real.pkl"), 'wb'))
-        dump(self.scaler_imag, open(os.path.join(self.experiment_path, "scaler_imag.pkl"), 'wb'))
+        return output
+        
+
+    def _transform_complex(self, complex_cords):
+        """ separates real and imaginary, applies log transform and transforms separately with minmax scaler """
+        # put the real and imaginary numbers into separate dimensions
+        real = np.real(complex_cords)
+        imaginary = np.imag(complex_cords)
+
+        self.minimums = -np.min(np.stack([real, imaginary])) + 0.00001
+        real += self.minimums
+        imaginary += self.minimums
+
+        # log transform
+        real = np.log(real)
+        imaginary = np.log(imaginary)
+        # scale with minmax
+        real_scaled, imag_scaled = self._scale_complex(real, imaginary)
 
         return real_scaled, imag_scaled
-        
 
 
-    def complex_to_png(self):
+    def inverse_convert_complex(self, complex_converted:np.array):
+        """ input is minmax-scaled and log transformed and 3-channeled. 
+        inverts back to complex numbers, ready for inverse-stft
+
+        Args:
+            complex_converted (np.array): minmax-scaled and log transformed 3-channel spectrogram
+
+        Returns:
+            complex_values (np.array): complex numbers that are ready for inverse-stft
+        """
+        # TODO: load scalers if not present
+
+        # invert the minmax
+        real = self.scalers['real'].inverse_transform(complex_converted[:,:,0])
+        imaginary = self.scalers['imag'].inverse_transform(complex_converted[:,:,1])
+        # invert the log transform
+        real = np.exp(real)
+        imaginary = np.exp(imaginary)
+
+        real += self.minimums
+        imaginary += self.minimums
+        # put into complex numbers
+        complex_numbers = real + 1j*imaginary
+
+        return complex_numbers
+
+
+    def convert_complex_for_nca(self):
         """
         saves complex coordinates to png image
         1. separate real and fake
@@ -84,18 +127,17 @@ class StftTransformer:
         """
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
 
-        # put the real and imaginary numbers into separate dimensions
-        real = np.real(self.complex_coords)
-        imaginary = np.imag(self.complex_coords)
-        real_scaled, imag_scaled = self._scale_complex(real, imaginary)
-        realcomplex = np.stack([real_scaled, imag_scaled, np.ones(real.shape, dtype=np.float)], axis=2)
+        real_transf, imag_transf = self._transform_complex(self.complex_coords)
+        # stack to save it as an image
+        self.complex_transf = np.stack([real_transf, imag_transf, np.ones(real_transf.shape, dtype=np.float)], axis=2)
 
         # write to file
-        imageio.imwrite(uri=self.paths.complex_coords, im=realcomplex)
-        imageio.imwrite(uri=os.path.join(self.experiment_path, "real_scaled.png"), im=real_scaled)
-        imageio.imwrite(uri=os.path.join(self.experiment_path, "imag_scaled.png"), im=imag_scaled)
+        imageio.imwrite(uri=self.paths.complex_coords, im=self.complex_transf)
+        imageio.imwrite(uri=os.path.join(self.experiment_path, "real_scaled.png"), im=real_transf)
+        imageio.imwrite(uri=os.path.join(self.experiment_path, "imag_scaled.png"), im=imag_transf)
         print(f"saved the png files to {self.experiment_path}")
-        return realcomplex
+
+        return self.complex_transf
 
     def _plot_spectrogram(self, spectrogram_path):
         """ saves spectrogram image """
