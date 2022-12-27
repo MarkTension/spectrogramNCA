@@ -8,6 +8,15 @@ from utils import AttributeDict
 from stft_transformer import StftTransformer
 from train import train
 
+
+
+
+"""
+some things to do
+TODO: return one numpy array at every training interval besides an image
+TODO: convert each of these training arrays back to wav
+"""
+
 class Experiment(Enum):
     RGB = 1
     COMPLEX = 2
@@ -51,20 +60,18 @@ def main():
                                     audio_array=data, 
                                     paths=paths)
 
-    # TEST 1: generate spectrogram by image. Do NCA on this
+    # TEST 1: generate NCA on image of spectrogram
     if (config.experiment == Experiment.RGB):
         train(image_path=paths.spectrogram)
 
-    # TEST 2: generate spectrogram by complex values. Do NCA on this
+    # TEST 2: generate NCA on complex values of spectrogram 
     if (config.experiment == Experiment.COMPLEX):
         complex_numbers = transformer.convert_complex_for_nca()
-        # transformer.complex_coords = complex_numbers[:500, :500]
         recon_complex_numbers = transformer.inverse_convert_complex(complex_numbers)
-        # recon_complex_numbers = recon_complex_numbers[:500,:500]
         transformer.complex_coords = recon_complex_numbers
         transformer.complex_to_audio(paths.reconstructed_wav)
 
-        train(image=complex_numbers, paths=paths)
+        train(image=complex_numbers, paths=paths, transformer=transformer)
 
     # to test if reverse works
     transformer.complex_to_audio(paths.reconstructed_wav) # which saves it

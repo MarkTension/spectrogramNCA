@@ -1,14 +1,17 @@
 ## README
 
-The following are steps to build the audio <--> spectrogram API/class.
-Thereafter I'll build the polar-coordinate manipulation module.
+This code is for doing neural cellular automata on audio.
+For this, the audio-spectrogram is used.
 
-#### step 1:
-convert audio to spectrogram
+Note that the audio spectrogram consists of amplitude, and phase information. 
+they are stored as complex numbers: amplitude = real, phase=imaginary.
 
-#### step 2:
-visualize spectrogram, and store polar coordinates
+The goal is to generate audio from evolving NCA, where I can interactively destroy parts of the signal, and it grows back to its original again.
 
-#### step 3:
-revert polar coordinates back to audio file
+### experiment 1
+do NCA on an image of the audio-spectrogram (just the amplitudes - decibel values, neglecting the phase information)
+### experiment 2
+do NCA on both the amplitude and phase information that are stored in the complex values. 
 
+## components
+There is an transformer class that can generate audio (wav) <--> spectrograms/complex values

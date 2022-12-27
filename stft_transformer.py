@@ -94,7 +94,7 @@ class StftTransformer:
 
 
     def inverse_convert_complex(self, complex_converted:np.array):
-        """ input is minmax-scaled and log transformed and 3-channeled. 
+        """ input is 1. log transformed, 2. minmax-scaled and saved. 
         inverts back to complex numbers, ready for inverse-stft
 
         Args:
@@ -104,16 +104,9 @@ class StftTransformer:
             complex_values (np.array): complex numbers that are ready for inverse-stft
         """
         # TODO: load scalers if not present
-
         # invert the minmax
         real = self.scalers['real'].inverse_transform(complex_converted[:,:,0])
         imaginary = self.scalers['imag'].inverse_transform(complex_converted[:,:,1])
-        # invert the log transform
-        # real = np.exp(real)
-        # imaginary = np.exp(imaginary)
-
-        # real += self.minimums
-        # imaginary += self.minimums
         # put into complex numbers
         complex_numbers = real + 1j*imaginary
         complex_numbers = np.exp(complex_numbers)
@@ -130,8 +123,6 @@ class StftTransformer:
         """
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
 
-        self.complex_coords = self.complex_coords[:500,:500]
-
         real_transf, imag_transf = self._transform_complex(self.complex_coords)
         # stack to save it as an image
         self.complex_transf = np.stack([real_transf, imag_transf, np.ones(real_transf.shape, dtype=np.float)], axis=2)
@@ -141,7 +132,6 @@ class StftTransformer:
         imageio.imwrite(uri=os.path.join(self.experiment_path, "real_scaled.png"), im=real_transf)
         imageio.imwrite(uri=os.path.join(self.experiment_path, "imag_scaled.png"), im=imag_transf)
         print(f"saved the png files to {self.experiment_path}")
-
         return self.complex_transf
 
     def _plot_spectrogram(self, spectrogram_path):

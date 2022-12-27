@@ -14,6 +14,7 @@ import os
 import numpy as np
 import matplotlib.pylab as pl
 from tqdm import tqdm
+from stft_transformer import StftTransformer
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
@@ -85,17 +86,23 @@ def to_rgb(x):
     return x[..., :3, :, :]+0.5
 
 
-def train(image, paths: AttributeDict):
+def train(image, paths: AttributeDict, transformer:StftTransformer):
+    """trains the neural cellular automata
 
+    Args:
+        image (np.array or path to image): the image to train on
+        paths (AttributeDict): the paths for training
+        transformer (StftTransformer): for transforming complex values to wav files
+    """
     if (type(image) == str):
         style_img = np.array(imageio.imread(image))
         style_img = style_img/255
     elif (str(type(image)) == "<class 'numpy.ndarray'>"):
         style_img = image
     else:
-        raise Exception("style image is not a path nor numpy array")
+        raise Exception("input error", "style image is not a path nor numpy array")
 
-    # ensure rectangular
+    # ensure square TODO: allow all rectangular dimensions
     style_img = style_img[:, :style_img.shape[0], :3]
 
     param_n = sum(p.numel() for p in CA().parameters())
@@ -136,9 +143,8 @@ def train(image, paths: AttributeDict):
     print('done training')
     write_video(ca=ca)
 
-
 def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log):
-
+    """trains cellular automata for 1 step"""    
     with torch.no_grad():
         batch_idx = np.random.choice(len(pool), 4, replace=False)
         x = pool[batch_idx]
