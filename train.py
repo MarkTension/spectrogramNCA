@@ -1,5 +1,5 @@
 """
-This code was adapted from Google Research's Colab notebook 
+This code was adapted from Google Research's Colab notebook
 https://colab.research.google.com/github/google-research/self-organising-systems/blob/master/notebooks/texture_nca_pytorch.ipynb
 and modularized
 """
@@ -14,13 +14,28 @@ import os
 import numpy as np
 import matplotlib.pylab as pl
 from tqdm import tqdm
+from stft_transformer import StftTransformer
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
 vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
+
+
+def plot_progress(loss_log: list, paths: AttributeDict, x: torch.tensor, i: int):
+    """ plots training progress: intermediate results"""
+    pl.plot(loss_log, '.', alpha=0.1)
+    pl.yscale('log')
+    pl.ylim(np.min(loss_log), loss_log[0])
+    pl.tight_layout()
+    # save loss plot
+    imsave(grab_plot(), id='log', count=i, path=paths.nca_results)
+    imgs = to_rgb(x).permute([0, 2, 3, 1]).cpu()
+    # save nca result
+    imsave(np.hstack(imgs), id='batch',
+           count=i, path=paths.nca_results)
 
 
 def calc_styles_vgg(imgs):
@@ -37,8 +52,10 @@ def calc_styles_vgg(imgs):
             features.append(x.reshape(b, c, h*w))
     return features
 
+
 def project_sort(x, proj):
     return torch.einsum('bcn,cp->bpn', x, proj).sort()[0]
+
 
 def ot_loss(source, target, proj_n=32):
     ch, n = source.shape[-2:]
@@ -69,28 +86,35 @@ def to_rgb(x):
     return x[..., :3, :, :]+0.5
 
 
-def train(image, paths:AttributeDict):
+def train(image, paths: AttributeDict, transformer:StftTransformer):
+    """trains the neural cellular automata
 
+    Args:
+        image (np.array or path to image): the image to train on
+        paths (AttributeDict): the paths for training
+        transformer (StftTransformer): for transforming complex values to wav files
+    """
     if (type(image) == str):
         style_img = np.array(imageio.imread(image))
-        style_img = style_img/255   
+        style_img = style_img/255
     elif (str(type(image)) == "<class 'numpy.ndarray'>"):
         style_img = image
     else:
-        raise Exception("style image is not a path or numpy array")
+        raise Exception("input error", "style image is not a path nor numpy array")
 
-    # ensure rectangular    
-    style_img = style_img[:,:style_img.shape[0], :3]
-    
+    # ensure square TODO: allow all rectangular dimensions
+    style_img = style_img[:, :style_img.shape[0], :3]
+
     param_n = sum(p.numel() for p in CA().parameters())
     print('CA param count:', param_n)
-    
+
     with torch.no_grad():
         style_img = to_nchw(style_img).float()
         loss_f = create_vgg_loss(style_img)
 
     viz_img = style_img.cpu().numpy()
-    imshow(np.moveaxis(viz_img[0,:,:], 0,-1), count=0)
+    imsave(np.moveaxis(viz_img[0, :, :], 0, -1),
+           count=0, path=paths.nca_results)
 
     # setup training
     ca = CA()
@@ -104,50 +128,54 @@ def train(image, paths:AttributeDict):
     gradient_checkpoints = False  # Set in case of OOM problems
 
     for i in range(5000):
+        loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log)
+        
         with torch.no_grad():
-            batch_idx = np.random.choice(len(pool), 4, replace=False)
-            x = pool[batch_idx]
-            if i % 8 == 0:
-                x[:1] = ca.seed(1)
-        step_n = np.random.randint(32, 96)
-        if not gradient_checkpoints:
-            for k in range(step_n):
-                x = ca(x)
-        else:
-            x.requires_grad = True
-            x = torch.utils.checkpoint.checkpoint_sequential(
-                [ca]*step_n, 16, x)
-
-        overflow_loss = (x-x.clamp(-1.0, 1.0)).abs().sum()
-        loss = loss_f(to_rgb(x))+overflow_loss
-        with torch.no_grad():
-            loss.backward()
-            for p in ca.parameters():
-                p.grad /= (p.grad.norm()+1e-8)   # normalize gradients
-
-            opt.step()
-            opt.zero_grad()
-            lr_sched.step()
-            pool[batch_idx] = x                # update pool
-
-            loss_log.append(loss.item())
             if i % 5 == 0:
                 print(f" \
-          step_n: {len(loss_log)} \
-          loss: {loss.item()} \
-          lr: {lr_sched.get_last_lr()[0]}")
+            step_n: {len(loss_log)} \
+            loss: {loss.item()} \
+            lr: {lr_sched.get_last_lr()[0]}")
 
             if i % 50 == 0:
-                pl.plot(loss_log, '.', alpha=0.1)
-                pl.yscale('log')
-                pl.ylim(np.min(loss_log), loss_log[0])
-                pl.tight_layout()
-                imsave(grab_plot(), id='log', count=i, path=paths.nca_results)
-                imgs = to_rgb(x).permute([0, 2, 3, 1]).cpu()
-                imsave(np.hstack(imgs), id='batch', count=i)
+                plot_progress(loss_log, paths, x, i)
 
     print('done training')
     write_video(ca=ca)
+
+def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log):
+    """trains cellular automata for 1 step"""    
+    with torch.no_grad():
+        batch_idx = np.random.choice(len(pool), 4, replace=False)
+        x = pool[batch_idx]
+        if i % 8 == 0:
+            x[:1] = ca.seed(1)
+
+    step_n = np.random.randint(32, 96)
+    if not gradient_checkpoints:
+        for _ in range(step_n):
+            x = ca(x)
+    else:
+        x.requires_grad = True
+        x = torch.utils.checkpoint.checkpoint_sequential(
+            [ca]*step_n, 16, x)
+
+    overflow_loss = (x-x.clamp(-1.0, 1.0)).abs().sum()
+    loss = loss_f(to_rgb(x)) + overflow_loss
+    
+    with torch.no_grad():
+        loss.backward()
+        for p in ca.parameters():
+            p.grad /= (p.grad.norm()+1e-8)   # normalize gradients
+
+        opt.step()
+        opt.zero_grad()
+        lr_sched.step()
+        pool[batch_idx] = x                # update pool
+
+        loss_log.append(loss.item())
+    
+    return loss, x, loss_log
 
 
 def write_video(ca: CA):
