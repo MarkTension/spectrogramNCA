@@ -60,6 +60,7 @@ def main():
         complex_numbers = transformer.convert_complex_for_nca()
         # transformer.complex_coords = complex_numbers[:500, :500]
         recon_complex_numbers = transformer.inverse_convert_complex(complex_numbers)
+        # recon_complex_numbers = recon_complex_numbers[:500,:500]
         transformer.complex_coords = recon_complex_numbers
         transformer.complex_to_audio(paths.reconstructed_wav)
 

@@ -74,17 +74,19 @@ class StftTransformer:
 
     def _transform_complex(self, complex_cords):
         """ separates real and imaginary, applies log transform and transforms separately with minmax scaler """
+        
+        complex_cords = np.log(complex_cords)
         # put the real and imaginary numbers into separate dimensions
         real = np.real(complex_cords)
         imaginary = np.imag(complex_cords)
 
-        self.minimums = -np.min(np.stack([real, imaginary])) + 0.00001
-        real += self.minimums
-        imaginary += self.minimums
+        # self.minimums = -np.min(np.stack([real, imaginary])) + 0.00001
+        # real += self.minimums
+        # imaginary += self.minimums
 
         # log transform
-        real = np.log(real)
-        imaginary = np.log(imaginary)
+        # real = np.log(real)
+        # imaginary = np.log(imaginary)
         # scale with minmax
         real_scaled, imag_scaled = self._scale_complex(real, imaginary)
 
@@ -107,13 +109,14 @@ class StftTransformer:
         real = self.scalers['real'].inverse_transform(complex_converted[:,:,0])
         imaginary = self.scalers['imag'].inverse_transform(complex_converted[:,:,1])
         # invert the log transform
-        real = np.exp(real)
-        imaginary = np.exp(imaginary)
+        # real = np.exp(real)
+        # imaginary = np.exp(imaginary)
 
-        real += self.minimums
-        imaginary += self.minimums
+        # real += self.minimums
+        # imaginary += self.minimums
         # put into complex numbers
         complex_numbers = real + 1j*imaginary
+        complex_numbers = np.exp(complex_numbers)
 
         return complex_numbers
 
@@ -126,6 +129,8 @@ class StftTransformer:
         3. write to png file
         """
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
+
+        self.complex_coords = self.complex_coords[:500,:500]
 
         real_transf, imag_transf = self._transform_complex(self.complex_coords)
         # stack to save it as an image
