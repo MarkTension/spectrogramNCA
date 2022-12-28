@@ -15,10 +15,11 @@ import numpy as np
 import matplotlib.pylab as pl
 from tqdm import tqdm
 from stft_transformer import StftTransformer
+from torch.nn import MSELoss
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-# torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
 vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
@@ -39,7 +40,7 @@ def plot_progress(loss_log: list, paths: AttributeDict, x: torch.tensor, i: int)
 
 
 def calc_styles_vgg(imgs):
-    style_layers = [1, 6, 11, 18, 25]
+    style_layers = [1, 6, 11,18, 25] #
     mean = torch.tensor([0.485, 0.456, 0.406])[:, None, None]
     std = torch.tensor([0.229, 0.224, 0.225])[:, None, None]
     x = (imgs-mean) / std
@@ -64,6 +65,14 @@ def ot_loss(source, target, proj_n=32):
     target_proj = project_sort(target, projs)
     target_interp = F.interpolate(target_proj, n, mode='nearest')
     return (source_proj-target_interp).square().sum()
+
+
+
+def create_mse_loss(target_img):
+    
+    loss_f = MSELoss(target_img)
+
+    return loss_f
 
 
 def create_vgg_loss(target_img):
@@ -111,6 +120,8 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     with torch.no_grad():
         style_img = to_nchw(style_img).float()
         loss_f = create_vgg_loss(style_img)
+
+        loss_f_2 = create_mse_loss(style_img)
 
     viz_img = style_img.cpu().numpy()
     imsave(np.moveaxis(viz_img[0, :, :], 0, -1),

@@ -123,6 +123,8 @@ class StftTransformer:
         """
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
 
+        self.complex_coords = self.complex_coords[:500,:500]
+
         real_transf, imag_transf = self._transform_complex(self.complex_coords)
         # stack to save it as an image
         self.complex_transf = np.stack([real_transf, imag_transf, np.ones(real_transf.shape, dtype=np.float)], axis=2)

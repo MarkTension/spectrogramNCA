@@ -9,8 +9,6 @@ from stft_transformer import StftTransformer
 from train import train
 
 
-
-
 """
 some things to do
 TODO: return one numpy array at every training interval besides an image

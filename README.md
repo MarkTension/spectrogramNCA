@@ -15,3 +15,8 @@ do NCA on both the amplitude and phase information that are stored in the comple
 
 ## components
 There is an transformer class that can generate audio (wav) <--> spectrograms/complex values
+
+
+### NOTES
+Taking the full sized complex numbers goes quite slow. 
+Taking only a slice of 500 x 500 goes faster, but sometimes stops. will try without halo infinte on the side
