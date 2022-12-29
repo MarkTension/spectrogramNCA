@@ -138,11 +138,13 @@ class StftTransformer:
 
         real_transf, imag_transf = self._transform_complex(self.complex_coords)
         # stack to save it as an image
-        self.complex_transf = np.stack([real_transf, imag_transf, np.ones(real_transf.shape, dtype=np.float)], axis=2)
+        self.complex_transf = np.stack([real_transf, imag_transf, np.zeros_like(real_transf)], axis=2) # , np.ones(real_transf.shape, dtype=np.float)
 
         # cutoff a set of frequencies to add again later
         if (self.freq_bin_cutoff != None):
             self.complex_transf = self.truncate_length(self.complex_transf)
+
+        # add extra dim to save as png
 
         # write to file
         imageio.imwrite(uri=self.paths.complex_coords, im=self.complex_transf)

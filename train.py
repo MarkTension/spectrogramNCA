@@ -71,11 +71,11 @@ def ot_loss(source, target, proj_n=32):
 
 
 
-def create_mse_loss(target_img):
+# def create_mse_loss(target_img):
     
-    loss_f = MSELoss(target_img)
+#     loss_f = MSELoss(target_img)
 
-    return loss_f
+#     return loss_f
 
 
 def create_vgg_loss(target_img):
@@ -122,7 +122,6 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     with torch.no_grad():
         style_img = to_nchw(style_img).float()
         loss_f = create_vgg_loss(style_img)
-
         # loss_f_2 = create_mse_loss(style_img)
 
     viz_img = style_img.cpu().numpy()
@@ -138,7 +137,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
         pool = ca.seed(256, sz_w=imsize[0], sz_h=imsize[1]) # TODO: use the image size here instead of the default 128. 256 stands for the number of pools
 
     # training loop
-    gradient_checkpoints = False  # Set in case of OOM problems
+    gradient_checkpoints = True  # Set in case of OOM problems
 
     for i in range(5000):
         loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize)
@@ -163,10 +162,10 @@ def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_lo
         # TODO: get hardcoded values out of training step
         x = pool[batch_idx]
         if i % 8 == 0: # Prevent “catastrophic forgetting”: replace one sample in this batch with the original, single-pixel seed state
-            # every 8 iterations we reset the first pool state? Why not select a random pool state? --> it is already randomly sampled!
+            # every 8 iterations we reset the first pool state. already randomly sampled!
             x[:1] = ca.seed(1, sz_w=imsize[0], sz_h=imsize[1])
 
-    step_n = np.random.randint(32, 96) # do between 32 and 96 updates. In paper it is 32 to 64
+    step_n = np.random.randint(32, 96) # sample between 32 and 96 steps
     if not gradient_checkpoints:
         for _ in range(step_n):
             x = ca(x)
