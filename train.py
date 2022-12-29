@@ -1,7 +1,10 @@
 """
-This code was adapted from Google Research's Colab notebook
+This code is for generating textures with cellular automata. 
+It is adapted from Google Research's Colab notebook
 https://colab.research.google.com/github/google-research/self-organising-systems/blob/master/notebooks/texture_nca_pytorch.ipynb
-and modularized
+commented and modularized by me
+
+The paper is neatly explained here: https://distill.pub/selforg/2021/textures/ 
 """
 
 from NCA import CA
@@ -19,7 +22,7 @@ from torch.nn import MSELoss
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
 vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
@@ -113,6 +116,8 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
 
     # ensure square TODO: allow all rectangular dimensions
     style_img = style_img[:, :style_img.shape[0], :3]
+    style_img = style_img[:style_img.shape[1], :, :3]
+    imsize = style_img.shape[0]
 
     param_n = sum(p.numel() for p in CA().parameters())
     print('CA param count:', param_n)
@@ -121,7 +126,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
         style_img = to_nchw(style_img).float()
         loss_f = create_vgg_loss(style_img)
 
-        loss_f_2 = create_mse_loss(style_img)
+        # loss_f_2 = create_mse_loss(style_img)
 
     viz_img = style_img.cpu().numpy()
     imsave(np.moveaxis(viz_img[0, :, :], 0, -1),
@@ -133,13 +138,13 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     lr_sched = torch.optim.lr_scheduler.MultiStepLR(opt, [1000, 2000], 0.3)
     loss_log = []
     with torch.no_grad():
-        pool = ca.seed(256)
+        pool = ca.seed(256, sz=imsize) # TODO: use the image size here instead of the default 128. 256 stands for the number of pools
 
     # training loop
     gradient_checkpoints = False  # Set in case of OOM problems
 
     for i in range(5000):
-        loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log)
+        loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize)
         
         with torch.no_grad():
             if i % 5 == 0:
@@ -154,15 +159,17 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     print('done training')
     write_video(ca=ca)
 
-def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log):
+def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize):
     """trains cellular automata for 1 step"""    
     with torch.no_grad():
-        batch_idx = np.random.choice(len(pool), 4, replace=False)
+        batch_idx = np.random.choice(len(pool), 4, replace=False) # only taking 4 out of 256. Why is that? can this be higher? 
+        # TODO: get hardcoded values out of training step
         x = pool[batch_idx]
-        if i % 8 == 0:
-            x[:1] = ca.seed(1)
+        if i % 8 == 0: # Prevent “catastrophic forgetting”: replace one sample in this batch with the original, single-pixel seed state
+            # every 8 iterations we reset the first pool state? Why not select a random pool state? --> it is already randomly sampled!
+            x[:1] = ca.seed(1, sz=imsize)
 
-    step_n = np.random.randint(32, 96)
+    step_n = np.random.randint(32, 96) # do between 32 and 96 updates. In paper it is 32 to 64
     if not gradient_checkpoints:
         for _ in range(step_n):
             x = ca(x)

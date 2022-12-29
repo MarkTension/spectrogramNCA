@@ -1,6 +1,6 @@
 import torch
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 
 ident = torch.tensor([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]])
@@ -34,11 +34,31 @@ class CA(torch.nn.Module):
         self.w2.weight.data.zero_()
 
     def forward(self, x, update_rate=0.5):
+        """_summary_
+
+        Args:
+            x (tensor): current state
+            update_rate (float, optional): chance of an update per cell. (stochastic cell update) Defaults to 0.5.
+
+        Returns:
+            _type_: _description_
+        """        
         y = perception(x)
         y = self.w2(torch.relu(self.w1(y)))
         b, c, h, w = y.shape
-        udpate_mask = (torch.rand(b, 1, h, w)+update_rate).floor()
-        return x+y*udpate_mask
 
-    def seed(self, n, sz=128):
+        # TODO: no living cell masking is implemented in this code. 
+        udpate_mask = (torch.rand(b, 1, h, w)+update_rate).floor()
+        return x + y * udpate_mask
+
+    def seed(self, n:int, sz=128):
+        """initiates the sample pool with black pixel state.
+
+        Args:
+            n (int): number of pools
+            sz (int, optional): the width/height dimension. Defaults to 128. # TODO: change sz to width AND height
+
+        Returns:
+            torch tensor: initialized sample pool
+        """        
         return torch.zeros(n, self.chn, sz, sz)

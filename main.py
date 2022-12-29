@@ -43,7 +43,7 @@ class config:
     rate = 48000
     n_fft = 2000
     experiment = Experiment.COMPLEX
-    sound_name = "bellPlate"
+    sound_name = 'texture1' #"bellPlate"
 
 def main():
     # set configuration. TODO: make yaml config    

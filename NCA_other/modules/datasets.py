@@ -6,7 +6,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 
 from modules.utils import load_emoji
-
+import imageio
 
 class StateGridSet(Dataset):
     def __init__(self, emoji='🦎', use_coords=False,
@@ -14,7 +14,10 @@ class StateGridSet(Dataset):
                  pad=16, target_size=40):
         # emojis = ['🦎', '😀', '💥', '👁', '🐠', '🦋', '🐞', '🕸', '🥨', '🎄']
 
-        self.target = torch.from_numpy(load_emoji(emoji=emoji)).permute(2, 0, 1).unsqueeze(0)
+        # self.target = torch.from_numpy(load_emoji(emoji=emoji)).permute(2, 0, 1).unsqueeze(0)
+        image = imageio.imread("documentation/bellPlate_spect.png")[:128,:128]
+        
+        self.target = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0)
         self.target = F.pad(self.target, (pad, pad, pad, pad), value=0)
         self.target = F.interpolate(self.target, target_size)[0]
 

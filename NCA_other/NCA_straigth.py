@@ -1,4 +1,3 @@
-import argparse
 import logging
 import os
 import random
@@ -18,11 +17,7 @@ from modules.models import SimpleCA
 from modules.networks import Perception, Policy
 from modules.utils import get_timestamp, set_random_seed, setup_logger
 
-parser = argparse.ArgumentParser(description='Train neural cellular automata')
-parser.add_argument('-c', '--config', type=str,
-                    help='path to config .yaml')
-args = parser.parse_args()
-config_path = args.config
+config_path = "NCA_other/config.yaml"
 
 with open(config_path) as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
@@ -61,7 +56,7 @@ logger = logging.getLogger('base')
 perception = Perception(channels=16,
                         norm_kernel=norm_kernel).to(device)
 policy = Policy(use_embedding=False, kernel=1, padding=0,
-                interm_dim=interm_dim, bias=bias).to(device)
+                interm_dim=interm_dim, bias=bias) #.to(device)
 
 model = SimpleCA(perception, policy, config, logger=logger,
                  grad_clip=config['optim']['grad_clip'])
