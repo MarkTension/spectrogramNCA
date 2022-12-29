@@ -114,10 +114,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     else:
         raise Exception("input error", "style image is not a path nor numpy array")
 
-    # ensure square TODO: allow all rectangular dimensions
-    style_img = style_img[:, :style_img.shape[0], :3]
-    style_img = style_img[:style_img.shape[1], :, :3]
-    imsize = style_img.shape[0]
+    imsize = style_img.shape[:2]
 
     param_n = sum(p.numel() for p in CA().parameters())
     print('CA param count:', param_n)
@@ -138,7 +135,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     lr_sched = torch.optim.lr_scheduler.MultiStepLR(opt, [1000, 2000], 0.3)
     loss_log = []
     with torch.no_grad():
-        pool = ca.seed(256, sz=imsize) # TODO: use the image size here instead of the default 128. 256 stands for the number of pools
+        pool = ca.seed(256, sz_w=imsize[0], sz_h=imsize[1]) # TODO: use the image size here instead of the default 128. 256 stands for the number of pools
 
     # training loop
     gradient_checkpoints = False  # Set in case of OOM problems
@@ -167,7 +164,7 @@ def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_lo
         x = pool[batch_idx]
         if i % 8 == 0: # Prevent “catastrophic forgetting”: replace one sample in this batch with the original, single-pixel seed state
             # every 8 iterations we reset the first pool state? Why not select a random pool state? --> it is already randomly sampled!
-            x[:1] = ca.seed(1, sz=imsize)
+            x[:1] = ca.seed(1, sz_w=imsize[0], sz_h=imsize[1])
 
     step_n = np.random.randint(32, 96) # do between 32 and 96 updates. In paper it is 32 to 64
     if not gradient_checkpoints:

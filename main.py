@@ -13,6 +13,10 @@ from train import train
 some things to do
 TODO: return one numpy array at every training interval besides an image
 TODO: convert each of these training arrays back to wav
+
+
+- can we make it rectangular? YES!
+- can we go for 2 channels instead of 3?
 """
 
 class Experiment(Enum):
@@ -44,6 +48,7 @@ class config:
     n_fft = 2000
     experiment = Experiment.COMPLEX
     sound_name = 'texture1' #"bellPlate"
+    freq_bin_cutoff = 256
 
 def main():
     # set configuration. TODO: make yaml config    
@@ -56,7 +61,8 @@ def main():
     transformer = StftTransformer(  n_fft=config.n_fft, 
                                     rate=config.rate, 
                                     audio_array=data, 
-                                    paths=paths)
+                                    paths=paths,
+                                    freq_bin_cutoff=config.freq_bin_cutoff)
 
     # TEST 1: generate NCA on image of spectrogram
     if (config.experiment == Experiment.RGB):

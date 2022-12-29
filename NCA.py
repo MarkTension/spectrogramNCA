@@ -51,14 +51,15 @@ class CA(torch.nn.Module):
         udpate_mask = (torch.rand(b, 1, h, w)+update_rate).floor()
         return x + y * udpate_mask
 
-    def seed(self, n:int, sz=128):
+    def seed(self, n:int, sz_w=128, sz_h=128):
         """initiates the sample pool with black pixel state.
 
         Args:
             n (int): number of pools
-            sz (int, optional): the width/height dimension. Defaults to 128. # TODO: change sz to width AND height
+            sz_w (int, optional): the width dimension. Defaults to 128
+            sz_h (int, optional): the height dimension. Defaults to 128
 
         Returns:
             torch tensor: initialized sample pool
         """        
-        return torch.zeros(n, self.chn, sz, sz)
+        return torch.zeros(n, self.chn, sz_w, sz_h)
