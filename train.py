@@ -42,6 +42,11 @@ def plot_progress(loss_log: list, paths: AttributeDict, x: torch.tensor, i: int)
            count=i, path=paths.nca_results)
 
 
+def save_audio_progress(transformer:StftTransformer, complex_numbers:np.array, paths):
+    recon_complex_numbers = transformer.inverse_convert_complex(complex_numbers)
+    transformer.complex_coords = recon_complex_numbers
+    transformer.complex_to_audio(paths.reconstructed_wav)
+
 def calc_styles_vgg(imgs):
     style_layers = [1, 6, 11,18, 25] #
     mean = torch.tensor([0.485, 0.456, 0.406])[:, None, None]
@@ -153,7 +158,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
                 plot_progress(loss_log, paths, x, i)
 
     print('done training')
-    write_video(ca=ca)
+    write_video(ca=ca, transformer=transformer)
 
 def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize):
     """trains cellular automata for 1 step"""    
@@ -192,8 +197,10 @@ def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_lo
     return loss, x, loss_log
 
 
-def write_video(ca: CA):
-    with VideoWriter() as vid, torch.no_grad():
+
+
+def write_video(ca: CA, transformer:StftTransformer, paths):
+    with (VideoWriter() as vid, torch.no_grad()):
         x = ca.seed(1, 256)
         for k in tqdm(range(300), leave=False):
             step_n = min(2**(k//30), 8)
@@ -201,7 +208,14 @@ def write_video(ca: CA):
                 x[:] = ca(x)
                 img = to_rgb(x[0]).permute(1, 2, 0).cpu().detach().numpy()
 
-            vid.add(zoom(img, 2))
+            # vid.add(zoom(img, 2))
+            vid.add(img)
+
+            recon_complex_numbers = transformer.inverse_convert_complex(img)
+            transformer.complex_coords = recon_complex_numbers
+            outname = f"{paths.output_wav[:-4]}_k{paths.output_wav[-4:]}"
+            transformer.complex_to_audio(outname, step=k)
+
             del img
 
     print('done video')

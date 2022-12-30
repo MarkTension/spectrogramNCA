@@ -13,6 +13,7 @@ from train import train
 some things to do
 TODO: return one numpy array at every training interval besides an image
 TODO: convert each of these training arrays back to wav
+TODO: remove all phase and amplitudes where it is below a certain value
 
 
 - can we make it rectangular? YES!
@@ -70,7 +71,7 @@ def main():
 
     # TEST 2: generate NCA on complex values of spectrogram 
     if (config.experiment == Experiment.COMPLEX):
-        complex_numbers = transformer.convert_complex_for_nca()
+        complex_numbers = transformer.convert_complex()
         recon_complex_numbers = transformer.inverse_convert_complex(complex_numbers)
         transformer.complex_coords = recon_complex_numbers
         transformer.complex_to_audio(paths.reconstructed_wav)
