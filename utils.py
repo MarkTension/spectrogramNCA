@@ -5,6 +5,8 @@ import moviepy.editor as mvp
 import os
 import numpy as np
 import matplotlib.pylab as pl
+import librosa
+
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
@@ -12,6 +14,23 @@ class AttributeDict(dict):
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+def plot_spectrogram(spectrogram_path:str, amplitudes:np.array):
+    """ saves spectrogram image """
+
+    fig, ax = plt.subplots()
+    img = librosa.display.specshow(librosa.amplitude_to_db(amplitudes,
+                                                            ref=np.max),
+                                    y_axis='log', x_axis='time', ax=ax)
+    ax.set_title('Power spectrogram')
+    # fig.colorbar(img, ax=ax, format="%+2.0f dB")
+    fig.subplots_adjust(bottom=0)
+    fig.subplots_adjust(top=1)
+    fig.subplots_adjust(right=1)
+    fig.subplots_adjust(left=0)
+    fig.savefig(spectrogram_path)
+
 
 def imsave(image, id=None, count=0, path='results'):
     imageio.imwrite(os.path.join(

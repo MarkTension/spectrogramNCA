@@ -3,36 +3,54 @@ import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
 import soundfile as sf
-from utils import AttributeDict
+from utils import AttributeDict, plot_spectrogram
 from pydub import AudioSegment
 from pydub.playback import play
 import imageio
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 from pickle import dump
 import os
+
+
+class Truncater():
+    """truncates the complex numbers' frequency bins, and saves the residue for later use"""
+
+    def __init__(self, complex_coords: np.array, truncate_length: int) -> None:
+        self._removed = None
+        self._truncated = self._truncate(complex_coords, truncate_length)
+
+    def _truncate(self, complex_coords: np.array, truncate_length: int):
+        self._removed = complex_coords[truncate_length:]
+        return complex_coords[:truncate_length]
+
+    def restore(self, complex_incomplete: np.array):
+        return np.concatenate([complex_incomplete, self._removed], axis=0)
+
+    @property
+    def truncated(self):
+        return self._truncated
+
 
 class StftTransformer:
     """
     class is responsible to convert an audio to and from complex coordinates / complex numbers, 
     and visualizing the file with an audio spectrogram
     """
-    def __init__(self, n_fft, rate, audio_array, paths:AttributeDict, freq_bin_cutoff:int=None):
+
+    def __init__(self, n_fft, rate, audio_array, paths: AttributeDict, freq_bin_cutoff: int = None):
         self.experiment_path = paths.experiment     # root of our experiment
         self.paths = paths
         self.rate = rate
         self.hop_length = n_fft // 4                # hop length standard value
         self.audio_out = None                       # for reconstructed audio
-        # self.scaler_real, self.scaler_imag = None, None
-        self.scalers = {}
-        self.minimums = 0 # the min val of the complex numbers
-        self.complex_coords_new = None
-        self.cutoff_residue = None
+        self.scalers = {}                           # minmax scalers for the complex numberes
         self.freq_bin_cutoff = freq_bin_cutoff
+        self.truncater = None
 
         # converts audio to complex numbers
-        self.complex_coords, self.amplitudes = self._audio_to_complex(audio_array)
-        self._plot_spectrogram(paths.spectrogram)
-
+        self.complex_coords, self.amplitudes = self._audio_to_complex(
+            audio_array)
+        plot_spectrogram(paths.spectrogram, self.amplitudes)
 
     def _audio_to_complex(self, audio_array: np.array):
         """sets the complex coordinates and amplitudes instance variable from the audio array"""
@@ -50,8 +68,11 @@ class StftTransformer:
 
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
 
+        if (self.freq_bin_cutoff != None):
+            complex_coords = self.truncater.restore(self.complex_coords)
+
         audio_array = librosa.istft(
-            self.complex_coords, hop_length=self.hop_length, window='hann')  # n_fft=2048,
+            complex_coords, hop_length=self.hop_length, window='hann')
         if (outfile_path != None):
             sf.write(outfile_path, audio_array, self.rate, subtype='PCM_24')
             print(f"saved the audio file to {outfile_path}")
@@ -59,45 +80,32 @@ class StftTransformer:
         # sets the audio out (array) instance variable from the saved file
         self.audio_out = AudioSegment.from_wav(outfile_path)
 
-
-    def _scale_complex(self, real, imaginary):
-        """ scales real and imaginary with sklearn scaler """        
+    def _scale_minmax(self, real, imaginary):
+        """ scales real and imaginary with sklearn scaler """
         output = []
         for name, values in [("real", real), ("imag", imaginary)]:
 
             self.scalers[name] = MinMaxScaler()
             self.scalers[name].fit(values)
             scaled = self.scalers[name].transform(values)
-            dump(self.scalers[name], open(os.path.join(self.experiment_path, f"scaler_{name}.pkl"), 'wb'))
+            dump(self.scalers[name], open(os.path.join(
+                self.experiment_path, f"scaler_{name}.pkl"), 'wb'))
             output.append(scaled)
 
         return output
-        
 
     def _transform_complex(self, complex_cords):
         """ separates real and imaginary, applies log transform and transforms separately with minmax scaler """
-        
+
         complex_cords = np.log(complex_cords)
         # put the real and imaginary numbers into separate dimensions
         real = np.real(complex_cords)
         imaginary = np.imag(complex_cords)
-
-        # self.minimums = -np.min(np.stack([real, imaginary])) + 0.00001
-        # real += self.minimums
-        # imaginary += self.minimums
-
-        # log transform
-        # real = np.log(real)
-        # imaginary = np.log(imaginary)
         # scale with minmax
-        real_scaled, imag_scaled = self._scale_complex(real, imaginary)
+        return self._scale_minmax(real, imaginary)
 
-        return real_scaled, imag_scaled
-
-
-    def inverse_convert_complex(self, complex_converted:np.array):
-        """ input is 1. log transformed, 2. minmax-scaled and saved. 
-        inverts back to complex numbers, ready for inverse-stft
+    def inverse_convert_complex(self, complex_converted: np.array):
+        """ inverts back to complex numbers, ready for inverse-stft
 
         Args:
             complex_converted (np.array): minmax-scaled and log transformed 3-channel spectrogram
@@ -105,70 +113,50 @@ class StftTransformer:
         Returns:
             complex_values (np.array): complex numbers that are ready for inverse-stft
         """
-        # TODO: load scalers if not present
         # invert the minmax
-        real = self.scalers['real'].inverse_transform(complex_converted[:,:,0])
-        imaginary = self.scalers['imag'].inverse_transform(complex_converted[:,:,1])
+        real = self.scalers['real'].inverse_transform(
+            complex_converted[:, :, 0])
+        imaginary = self.scalers['imag'].inverse_transform(
+            complex_converted[:, :, 1])
         # put into complex numbers
         complex_numbers = real + 1j*imaginary
         complex_numbers = np.exp(complex_numbers)
 
         return complex_numbers
 
+    def _complex_to_png(self, real_transf, imag_transf, mask):
+        # write to file
+        imageio.imwrite(uri=self.paths.complex_coords, im=self.complex_transf)
+        imageio.imwrite(uri=os.path.join(self.experiment_path,
+                        "real_scaled.png"), im=real_transf*mask)
+        imageio.imwrite(uri=os.path.join(self.experiment_path,
+                        "imag_scaled.png"), im=imag_transf*mask)
+        print(f"saved the png files to {self.experiment_path}")
 
-    def truncate_length(self, complex_coords):
-        
-        print(f"cutting off frequency bins. Shape before is {complex_coords.shape}")
-
-        self.cutoff_residue = complex_coords[self.freq_bin_cutoff:]
-        complex_new = complex_coords[:self.freq_bin_cutoff]
-        print(f"shape after is {complex_new.shape}")
-
-        return complex_new
-
-
-    def convert_complex_for_nca(self):
+    def convert_complex(self):
         """
-        saves complex coordinates to png image
-        1. separate real and fake
-        2. scale both independently, and stack
-        3. write to png file
+        takes part of the freq bins, and scales complex numbers to normalized values
         """
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
 
-        real_transf, imag_transf = self._transform_complex(self.complex_coords)
-        # stack to save it as an image
-        self.complex_transf = np.stack([real_transf, imag_transf, np.zeros_like(real_transf)], axis=2) # , np.ones(real_transf.shape, dtype=np.float)
-
         # cutoff a set of frequencies to add again later
         if (self.freq_bin_cutoff != None):
-            self.complex_transf = self.truncate_length(self.complex_transf)
+            self.truncater = Truncater(
+                self.complex_coords, self.freq_bin_cutoff)
+            self.complex_coords = self.truncater.truncated
 
-        # add extra dim to save as png
+        real_transf, imag_transf = self._transform_complex(self.complex_coords)
+        # stack to save it as a .png
+        self.complex_transf = np.stack(
+            [real_transf, imag_transf, np.zeros_like(real_transf)], axis=2)
 
-        # write to file
-        imageio.imwrite(uri=self.paths.complex_coords, im=self.complex_transf)
-        imageio.imwrite(uri=os.path.join(self.experiment_path, "real_scaled.png"), im=real_transf)
-        imageio.imwrite(uri=os.path.join(self.experiment_path, "imag_scaled.png"), im=imag_transf)
-        print(f"saved the png files to {self.experiment_path}")
+        # set low amplitudes to 0
+        mask = real_transf > 0.3
+        self.complex_transf = self.complex_transf * \
+            np.expand_dims(mask, axis=-1)
+
+        self._complex_to_png(real_transf, imag_transf, mask)
         return self.complex_transf
-
-    def _plot_spectrogram(self, spectrogram_path):
-        """ saves spectrogram image """
-
-        fig, ax = plt.subplots()
-        img = librosa.display.specshow(librosa.amplitude_to_db(self.amplitudes,
-                                                               ref=np.max),
-                                       y_axis='log', x_axis='time', ax=ax)
-        ax.set_title('Power spectrogram')
-        # fig.colorbar(img, ax=ax, format="%+2.0f dB")
-        fig.subplots_adjust(bottom=0)
-        fig.subplots_adjust(top=1)
-        fig.subplots_adjust(right=1)
-        fig.subplots_adjust(left=0)
-        # fig.show()
-        fig.savefig(spectrogram_path)
-
 
     def play_sounds(self):
         assert self.audio_out != None
