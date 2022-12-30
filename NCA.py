@@ -63,4 +63,3 @@ class CA(torch.nn.Module):
             torch tensor: initialized sample pool
         """        
         return torch.zeros(n, self.chn, sz_w, sz_h)
-
