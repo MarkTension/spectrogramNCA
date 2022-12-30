@@ -35,6 +35,7 @@ def set_paths(sound_name):
     paths = {
         "experiment" : experiment_root,
         "nca_results" : nca_results,
+        "nca_video": os.path.join(nca_results, "outvideo.mp4"),
         "input_wav" : os.path.join("samples", f"{sound_name}.wav"),
         "reconstructed_wav" : os.path.join(experiment_root, f"{sound_name}_reconstruced.wav"),
         "spectrogram" : os.path.join(experiment_root, f"{sound_name}_spect.png"),

@@ -144,7 +144,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     # training loop
     gradient_checkpoints = True  # Set in case of OOM problems
 
-    for i in range(5000):
+    for i in range(10):
         loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize)
         
         with torch.no_grad():
@@ -158,7 +158,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
                 plot_progress(loss_log, paths, x, i)
 
     print('done training')
-    write_video(ca=ca, transformer=transformer)
+    write_video(ca=ca, transformer=transformer, paths=paths)
 
 def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize):
     """trains cellular automata for 1 step"""    
@@ -199,8 +199,8 @@ def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_lo
 
 
 
-def write_video(ca: CA, transformer:StftTransformer, paths):
-    with (VideoWriter() as vid, torch.no_grad()):
+def write_video(ca: CA, transformer:StftTransformer, paths:AttributeDict):
+    with (VideoWriter(filename=paths.nca_video) as vid, torch.no_grad()):
         x = ca.seed(1, 256)
         for k in tqdm(range(300), leave=False):
             step_n = min(2**(k//30), 8)
@@ -214,7 +214,7 @@ def write_video(ca: CA, transformer:StftTransformer, paths):
             recon_complex_numbers = transformer.inverse_convert_complex(img)
             transformer.complex_coords = recon_complex_numbers
             outname = f"{paths.output_wav[:-4]}_k{paths.output_wav[-4:]}"
-            transformer.complex_to_audio(outname, step=k)
+            transformer.complex_to_audio(outname)
 
             del img
 
