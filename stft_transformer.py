@@ -37,11 +37,7 @@ class StftTransformer:
     and visualizing the file with an audio spectrogram
     """
 
-<<<<<<< HEAD
-    def __init__(self, n_fft, rate, audio_array, paths: AttributeDict, sample_len:int, freq_bin_cutoff: int = None):
-=======
-    def __init__(self, n_fft, rate, audio_array, paths: AttributeDict, freq_bin_cutoff: int = None, method='cqt'):
->>>>>>> 7cc4f02c26c7496e2c9c170164412c7289651a98
+    def __init__(self, n_fft, rate, audio_array, paths: AttributeDict, sample_len:int, freq_bin_cutoff: int = None, method='cqt'):
         self.experiment_path = paths.experiment     # root of our experiment
         self.paths = paths
         self.rate = rate
@@ -50,12 +46,9 @@ class StftTransformer:
         self.scalers = {}                           # minmax scalers for the complex numberes
         self.freq_bin_cutoff = freq_bin_cutoff
         self.truncater = None
-<<<<<<< HEAD
-        self.sample_len = sample_len
-=======
         self.transformer = librosa.stft if method == 'stft' else librosa.cqt
         self.inverse_transformer = librosa.istft if method == 'stft' else librosa.icqt
->>>>>>> 7cc4f02c26c7496e2c9c170164412c7289651a98
+        self.sample_len = sample_len
 
         # converts audio to complex numbers
         self.complex_coords, self.amplitudes = self._audio_to_complex(
@@ -147,8 +140,9 @@ class StftTransformer:
         """
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
 
-        # TODO: remove this. temporary time contraint
-        self.complex_coords = self.complex_coords[:,:256]
+
+        # # TODO: remove this. temporary time contraint
+        # self.complex_coords = self.complex_coords[:,:256]
 
         # cutoff a set of frequencies to add again later
         if (self.freq_bin_cutoff != None):
