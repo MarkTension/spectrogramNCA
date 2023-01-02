@@ -119,7 +119,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     else:
         raise Exception("input error", "style image is not a path nor numpy array")
 
-    style_img = style_img[:500,:256,:]
+    # style_img = style_img[:500,:256,:]
     imsize = style_img.shape[:2]
 
     param_n = sum(p.numel() for p in CA().parameters())
@@ -145,7 +145,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     # training loop
     gradient_checkpoints = True  # Set in case of OOM problems
 
-    for i in range(10):
+    for i in range(3000):
         loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize)
         
         with torch.no_grad():
@@ -159,16 +159,16 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
                 plot_progress(loss_log, paths, x, i)
 
     print('done training')
-    write_video(ca=ca, transformer=transformer, paths=paths)
+    write_video(ca=ca, transformer=transformer, paths=paths, imsize=imsize)
 
 def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize):
     """trains cellular automata for 1 step"""    
     with torch.no_grad():
-        batch_idx = np.random.choice(len(pool), 4, replace=False) # only taking 4 out of 256. Why is that? can this be higher? 
+        batch_idx = np.random.choice(len(pool), 4, replace=False) # sampling 4 out of 256. higher leads to OOM
         # TODO: get hardcoded values out of training step
         x = pool[batch_idx]
         if i % 8 == 0: # Prevent “catastrophic forgetting”: replace one sample in this batch with the original, single-pixel seed state
-            # every 8 iterations we reset the first pool state. already randomly sampled!
+            # every 8 iterations we reset the first pool state. already randomly sampled
             x[:1] = ca.seed(1, sz_w=imsize[0], sz_h=imsize[1])
 
     step_n = np.random.randint(32, 96) # sample between 32 and 96 steps
@@ -200,9 +200,9 @@ def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_lo
 
 
 
-def write_video(ca: CA, transformer:StftTransformer, paths:AttributeDict):
-    with (VideoWriter(filename=paths.nca_video) as vid, torch.no_grad()):
-        x = ca.seed(1, 256)
+def write_video(ca: CA, transformer:StftTransformer, paths:AttributeDict, imsize:tuple):
+    with VideoWriter(filename=paths.nca_video) as vid, torch.no_grad():
+        x = ca.seed(n=1, sz_w=imsize[0], sz_h=imsize[1])
         for k in tqdm(range(300), leave=False):
             step_n = min(2**(k//30), 8)
             for _ in range(step_n):
@@ -212,9 +212,9 @@ def write_video(ca: CA, transformer:StftTransformer, paths:AttributeDict):
             # vid.add(zoom(img, 2))
             vid.add(img)
 
-            recon_complex_numbers = transformer.inverse_convert_complex(img)
+            recon_complex_numbers = transformer.inverse_convert_complex(img[:,:,:2])
             transformer.complex_coords = recon_complex_numbers
-            outname = f"{paths.output_wav[:-4]}_k{paths.output_wav[-4:]}"
+            outname = f"{paths.nca_audio[:-4]}_{k}_{paths.nca_audio[-4:]}"
             transformer.complex_to_audio(outname)
 
             del img

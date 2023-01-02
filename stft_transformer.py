@@ -37,7 +37,7 @@ class StftTransformer:
     and visualizing the file with an audio spectrogram
     """
 
-    def __init__(self, n_fft, rate, audio_array, paths: AttributeDict, freq_bin_cutoff: int = None):
+    def __init__(self, n_fft, rate, audio_array, paths: AttributeDict, sample_len:int, freq_bin_cutoff: int = None):
         self.experiment_path = paths.experiment     # root of our experiment
         self.paths = paths
         self.rate = rate
@@ -46,6 +46,7 @@ class StftTransformer:
         self.scalers = {}                           # minmax scalers for the complex numberes
         self.freq_bin_cutoff = freq_bin_cutoff
         self.truncater = None
+        self.sample_len = sample_len
 
         # converts audio to complex numbers
         self.complex_coords, self.amplitudes = self._audio_to_complex(
@@ -139,12 +140,15 @@ class StftTransformer:
         """
         assert str(type(self.complex_coords)) == "<class 'numpy.ndarray'>"
 
+        # TODO: remove this. temporary time contraint
+        self.complex_coords = self.complex_coords[:,:256]
+
         # cutoff a set of frequencies to add again later
         if (self.freq_bin_cutoff != None):
             self.truncater = Truncater(
                 self.complex_coords, self.freq_bin_cutoff)
             self.complex_coords = self.truncater.truncated
-
+        
         real_transf, imag_transf = self._transform_complex(self.complex_coords)
         # stack to save it as a .png
         self.complex_transf = np.stack(

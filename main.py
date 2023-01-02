@@ -8,13 +8,13 @@ from utils import AttributeDict
 from stft_transformer import StftTransformer
 from train import train
 
-
 """
 some things to do
 TODO: return one numpy array at every training interval besides an image
 TODO: convert each of these training arrays back to wav
 TODO: remove all phase and amplitudes where it is below a certain value
-
+TODO: for audio reconstruction, clip amplitudes above a certain threshold.
+TODO: try out mel_frequencies. librosa.core.mel_frequencies
 
 - can we make it rectangular? YES!
 - can we go for 2 channels instead of 3?
@@ -36,6 +36,7 @@ def set_paths(sound_name):
         "experiment" : experiment_root,
         "nca_results" : nca_results,
         "nca_video": os.path.join(nca_results, "outvideo.mp4"),
+        "nca_audio": os.path.join(nca_results, "outaudio.wav"),
         "input_wav" : os.path.join("samples", f"{sound_name}.wav"),
         "reconstructed_wav" : os.path.join(experiment_root, f"{sound_name}_reconstruced.wav"),
         "spectrogram" : os.path.join(experiment_root, f"{sound_name}_spect.png"),
@@ -49,7 +50,7 @@ class config:
     rate = 48000
     n_fft = 2000
     experiment = Experiment.COMPLEX
-    sound_name = 'texture1' #"bellPlate"
+    sound_name = 'drum' #'texture1' #"bellPlate"
     freq_bin_cutoff = 256
 
 def main():
@@ -64,7 +65,8 @@ def main():
                                     rate=config.rate, 
                                     audio_array=data, 
                                     paths=paths,
-                                    freq_bin_cutoff=config.freq_bin_cutoff)
+                                    freq_bin_cutoff=config.freq_bin_cutoff,
+                                    sample_len = sample_length)
 
     # TEST 1: generate NCA on image of spectrogram
     if (config.experiment == Experiment.RGB):
