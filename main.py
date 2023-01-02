@@ -7,7 +7,8 @@ from datetime import datetime
 from utils import AttributeDict
 from stft_transformer import StftTransformer
 from train import train
-
+import matplotlib.pyplot as plt
+import numpy as np
 
 """
 some things to do
@@ -64,7 +65,8 @@ def main():
                                     rate=config.rate, 
                                     audio_array=data, 
                                     paths=paths,
-                                    freq_bin_cutoff=config.freq_bin_cutoff)
+                                    freq_bin_cutoff=config.freq_bin_cutoff,
+                                    method='cqt')
 
     # TEST 1: generate NCA on image of spectrogram
     if (config.experiment == Experiment.RGB):
