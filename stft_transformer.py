@@ -37,7 +37,11 @@ class StftTransformer:
     and visualizing the file with an audio spectrogram
     """
 
+<<<<<<< HEAD
     def __init__(self, n_fft, rate, audio_array, paths: AttributeDict, sample_len:int, freq_bin_cutoff: int = None):
+=======
+    def __init__(self, n_fft, rate, audio_array, paths: AttributeDict, freq_bin_cutoff: int = None, method='cqt'):
+>>>>>>> 7cc4f02c26c7496e2c9c170164412c7289651a98
         self.experiment_path = paths.experiment     # root of our experiment
         self.paths = paths
         self.rate = rate
@@ -46,7 +50,12 @@ class StftTransformer:
         self.scalers = {}                           # minmax scalers for the complex numberes
         self.freq_bin_cutoff = freq_bin_cutoff
         self.truncater = None
+<<<<<<< HEAD
         self.sample_len = sample_len
+=======
+        self.transformer = librosa.stft if method == 'stft' else librosa.cqt
+        self.inverse_transformer = librosa.istft if method == 'stft' else librosa.icqt
+>>>>>>> 7cc4f02c26c7496e2c9c170164412c7289651a98
 
         # converts audio to complex numbers
         self.complex_coords, self.amplitudes = self._audio_to_complex(
@@ -55,11 +64,9 @@ class StftTransformer:
 
     def _audio_to_complex(self, audio_array: np.array):
         """sets the complex coordinates and amplitudes instance variable from the audio array"""
-
-        complex_coords = librosa.stft(
-            audio_array, hop_length=self.hop_length, window='hann', center=True)  # n_fft=2048,
-        amplitudes = np.abs(complex_coords)
-        return complex_coords, amplitudes
+        complex_coords = self.transformer(
+            audio_array, hop_length=self.hop_length, window='hann')
+        return complex_coords, np.abs(complex_coords)
 
     def complex_to_audio(self, outfile_path=None):
         """
@@ -72,7 +79,7 @@ class StftTransformer:
         if (self.freq_bin_cutoff != None):
             complex_coords = self.truncater.restore(self.complex_coords)
 
-        audio_array = librosa.istft(
+        audio_array = self.inverse_transformer(
             complex_coords, hop_length=self.hop_length, window='hann')
         if (outfile_path != None):
             sf.write(outfile_path, audio_array, self.rate, subtype='PCM_24')

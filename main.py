@@ -66,7 +66,8 @@ def main():
                                     audio_array=data, 
                                     paths=paths,
                                     freq_bin_cutoff=config.freq_bin_cutoff,
-                                    sample_len = sample_length)
+                                    sample_len = sample_length,
+                                    method='cqt')
 
     # TEST 1: generate NCA on image of spectrogram
     if (config.experiment == Experiment.RGB):

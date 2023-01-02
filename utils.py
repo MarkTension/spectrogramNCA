@@ -22,7 +22,7 @@ def plot_spectrogram(spectrogram_path:str, amplitudes:np.array):
     fig, ax = plt.subplots()
     img = librosa.display.specshow(librosa.amplitude_to_db(amplitudes,
                                                             ref=np.max),
-                                    y_axis='log', x_axis='time', ax=ax)
+                                    y_axis='linear', x_axis='time', ax=ax)
     ax.set_title('Power spectrogram')
     # fig.colorbar(img, ax=ax, format="%+2.0f dB")
     fig.subplots_adjust(bottom=0)
