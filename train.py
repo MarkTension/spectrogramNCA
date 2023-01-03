@@ -90,6 +90,12 @@ def create_vgg_loss(target_img):
         xx = calc_styles_vgg(imgs)
         return sum(ot_loss(x, y) for x, y in zip(xx, yy))
     return loss_f
+    
+    
+def create_image_loss(target_img):
+    def loss_f(imgs):
+        return torch.sum(torch.abs(target_img - imgs), keepdim=False, dim=None)
+    return loss_f
 
 
 def to_nchw(img):
@@ -128,7 +134,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     with torch.no_grad():
         style_img = to_nchw(style_img).float()
         loss_f = create_vgg_loss(style_img)
-        # loss_f_2 = create_mse_loss(style_img)
+        loss_f_image = create_image_loss(style_img)
 
     viz_img = style_img.cpu().numpy()
     imsave(np.moveaxis(viz_img[0, :, :], 0, -1),
@@ -145,8 +151,8 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     # training loop
     gradient_checkpoints = True  # Set in case of OOM problems
 
-    for i in range(3000):
-        loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize)
+    for i in range(2000):
+        loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f_image, opt, lr_sched, loss_log, imsize)
         
         with torch.no_grad():
             if i % 5 == 0:
