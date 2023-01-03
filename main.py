@@ -11,13 +11,7 @@ from train import train
 """
 some things to do
 TODO: return one numpy array at every training interval besides an image
-TODO: convert each of these training arrays back to wav
-TODO: remove all phase and amplitudes where it is below a certain value
 TODO: for audio reconstruction, clip amplitudes above a certain threshold.
-TODO: try out mel_frequencies. librosa.core.mel_frequencies
-
-- can we make it rectangular? YES!
-- can we go for 2 channels instead of 3?
 """
 
 class Experiment(Enum):
@@ -50,7 +44,7 @@ class config:
     rate = 48000
     n_fft = 2000
     experiment = Experiment.COMPLEX
-    sound_name = 'drum' #'texture1' #"bellPlate"
+    sound_name = "bellPlate" #'drum' #'texture1' #"bellPlate"
     freq_bin_cutoff = 256
 
 def main():

@@ -156,7 +156,7 @@ class StftTransformer:
             [real_transf, imag_transf, np.zeros_like(real_transf)], axis=2)
 
         # set low amplitudes to 0
-        mask = real_transf > 0.3
+        mask = real_transf > 0.0
         self.complex_transf = self.complex_transf * \
             np.expand_dims(mask, axis=-1)
 
