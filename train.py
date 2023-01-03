@@ -94,7 +94,7 @@ def create_vgg_loss(target_img):
     
 def create_image_loss(target_img):
     def loss_f(imgs):
-        return torch.sum(torch.abs(target_img - imgs), keepdim=False, dim=None)
+        return torch.mean(torch.pow(target_img - imgs, 2))
     return loss_f
 
 

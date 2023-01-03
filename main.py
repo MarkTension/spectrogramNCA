@@ -44,7 +44,7 @@ class config:
     rate = 48000
     n_fft = 2000
     experiment = Experiment.COMPLEX
-    sound_name = "bellPlate" #'drum' #'texture1' #"bellPlate"
+    sound_name = "drum" #'drum' #'texture1' #"bellPlate"
     freq_bin_cutoff = 256
 
 def main():
