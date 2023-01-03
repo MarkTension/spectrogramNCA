@@ -1,6 +1,6 @@
 import torch
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 
 ident = torch.tensor([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]])
@@ -20,6 +20,13 @@ def perchannel_conv(x, filters):
 def perception(x):
     filters = torch.stack([ident, sobel_x, sobel_x.T, lap])
     return perchannel_conv(x, filters)
+
+
+def get_living_mask(x):
+  alpha = x[:, 3:4, :, :] # used to be on last dim
+  return torch.max_pool2d(alpha, kernel_size=3, stride=1, padding=1) > 0.1
+
+
 
 
 class CA(torch.nn.Module):
@@ -42,14 +49,18 @@ class CA(torch.nn.Module):
 
         Returns:
             _type_: _description_
-        """        
+        """      
         y = perception(x)
         y = self.w2(torch.relu(self.w1(y)))
         b, c, h, w = y.shape
 
         # TODO: no living cell masking is implemented in this code. 
         udpate_mask = (torch.rand(b, 1, h, w)+update_rate).floor()
-        return x + y * udpate_mask
+        
+        living_mask = get_living_mask(x) & get_living_mask(y)
+        # post_mask = get_living_mask(y)  
+
+        return (x + y * udpate_mask) * living_mask
 
     def seed(self, n:int, sz_w=256, sz_h=256):
         """initiates the sample pool with black pixel state.

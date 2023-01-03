@@ -22,7 +22,7 @@ from torch.nn import MSELoss
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
 vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
