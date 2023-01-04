@@ -1,6 +1,6 @@
 import torch
 
-# torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 
 ident = torch.tensor([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]])
@@ -54,13 +54,12 @@ class CA(torch.nn.Module):
         y = self.w2(torch.relu(self.w1(y)))
         b, c, h, w = y.shape
 
-        # TODO: no living cell masking is implemented in this code. 
         udpate_mask = (torch.rand(b, 1, h, w)+update_rate).floor()
         
-        living_mask = get_living_mask(x) & get_living_mask(y)
+        living_mask = get_living_mask(x) #& get_living_mask(y)
         # post_mask = get_living_mask(y)  
 
-        return (x + y * udpate_mask) * living_mask
+        return x + y * (udpate_mask * living_mask)
 
     def seed(self, n:int, sz_w=256, sz_h=256):
         """initiates the sample pool with black pixel state.
@@ -73,4 +72,7 @@ class CA(torch.nn.Module):
         Returns:
             torch tensor: initialized sample pool
         """        
-        return torch.zeros(n, self.chn, sz_w, sz_h)
+
+        seed = torch.zeros(n, self.chn, sz_w, sz_h)
+        seed[:, 3:, sz_w//2, sz_h//2] = 1.0
+        return seed

@@ -12,6 +12,11 @@ from train import train
 some things to do
 TODO: return one numpy array at every training interval besides an image
 TODO: for audio reconstruction, clip amplitudes above a certain threshold.
+TODO: save the models, and allow loading them
+TODO: auto-generate audio sequence
+TODO: make yaml config
+TODO: integrate new loss function with style loss function
+TODO: look at cowbell reconstruction error!
 """
 
 class Experiment(Enum):
@@ -42,10 +47,10 @@ def set_paths(sound_name):
 
 class config:
     rate = 48000
-    n_fft = 2000
+    n_fft = 200 # 2000
     experiment = Experiment.COMPLEX
-    sound_name = "drum" #'drum' #'texture1' #"bellPlate"
-    freq_bin_cutoff = 256
+    sound_name = "808_cowbell_48k" #"kicksnare" #'drum' #'texture1' #"bellPlate"
+    freq_bin_cutoff = None # 256
 
 def main():
     # set configuration. TODO: make yaml config    

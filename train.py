@@ -22,7 +22,7 @@ from torch.nn import MSELoss
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-# torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
 vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
@@ -73,14 +73,6 @@ def ot_loss(source, target, proj_n=32):
     target_proj = project_sort(target, projs)
     target_interp = F.interpolate(target_proj, n, mode='nearest')
     return (source_proj-target_interp).square().sum()
-
-
-
-# def create_mse_loss(target_img):
-    
-#     loss_f = MSELoss(target_img)
-
-#     return loss_f
 
 
 def create_vgg_loss(target_img):

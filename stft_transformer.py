@@ -71,6 +71,8 @@ class StftTransformer:
 
         if (self.freq_bin_cutoff != None):
             complex_coords = self.truncater.restore(self.complex_coords)
+        else:
+            complex_coords = self.complex_coords
 
         audio_array = self.inverse_transformer(
             complex_coords, hop_length=self.hop_length, window='hann')
