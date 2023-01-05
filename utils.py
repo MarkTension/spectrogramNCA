@@ -6,7 +6,7 @@ import os
 import numpy as np
 import matplotlib.pylab as pl
 import librosa
-
+import yaml
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
@@ -14,6 +14,17 @@ class AttributeDict(dict):
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+def load_config(path):
+    with open(path, "r") as file:
+        config = yaml.load(file, Loader=yaml.FullLoader)
+
+    return AttributeDict(config)
+
+def write_config(path, config):
+    with open(os.path.join(path, "config.yaml"), "w") as file:
+        config = yaml.dump(dict(config), file)
 
 
 def plot_spectrogram(spectrogram_path:str, amplitudes:np.array):

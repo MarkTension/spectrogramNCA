@@ -35,12 +35,11 @@ def plot_progress(loss_log: list, paths: AttributeDict, x: torch.tensor, i: int)
     pl.ylim(np.min(loss_log), loss_log[0])
     pl.tight_layout()
     # save loss plot
-    imsave(grab_plot(), id='log', count=i, path=paths.nca_results)
+    imsave(grab_plot(), id='log', count=i, path=paths.nca_results_training)
     imgs = to_rgb(x).permute([0, 2, 3, 1]).cpu()
     # save nca result
     imsave(np.hstack(imgs), id='batch',
-           count=i, path=paths.nca_results)
-
+           count=i, path=paths.nca_results_training)
 
 def save_audio_progress(transformer:StftTransformer, complex_numbers:np.array, paths):
     recon_complex_numbers = transformer.inverse_convert_complex(complex_numbers)
@@ -101,7 +100,7 @@ def to_rgb(x):
     return x[..., :3, :, :]+0.5
 
 
-def train(image, paths: AttributeDict, transformer:StftTransformer):
+def train(image, paths: AttributeDict, transformer:StftTransformer, config:AttributeDict):
     """trains the neural cellular automata
 
     Args:
@@ -117,7 +116,6 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     else:
         raise Exception("input error", "style image is not a path nor numpy array")
 
-    # style_img = style_img[:500,:256,:]
     imsize = style_img.shape[:2]
 
     param_n = sum(p.numel() for p in CA().parameters())
@@ -126,7 +124,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     with torch.no_grad():
         style_img = to_nchw(style_img).float()
         loss_f = create_vgg_loss(style_img)
-        loss_f_image = create_image_loss(style_img)
+        # loss_f_image = create_image_loss(style_img)
 
     viz_img = style_img.cpu().numpy()
     imsave(np.moveaxis(viz_img[0, :, :], 0, -1),
@@ -143,8 +141,8 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
     # training loop
     gradient_checkpoints = True  # Set in case of OOM problems
 
-    for i in range(2000):
-        loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f_image, opt, lr_sched, loss_log, imsize)
+    for i in range(config.num_train_steps):
+        loss, x, loss_log = train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize)
         
         with torch.no_grad():
             if i % 5 == 0:
@@ -158,6 +156,9 @@ def train(image, paths: AttributeDict, transformer:StftTransformer):
 
     print('done training')
     write_video(ca=ca, transformer=transformer, paths=paths, imsize=imsize)
+
+    # save model
+    torch.save(ca.state_dict(), paths.model_path)
 
 def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_log, imsize):
     """trains cellular automata for 1 step"""    
@@ -195,6 +196,12 @@ def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_lo
     
     return loss, x, loss_log
 
+
+def sample(transformer:StftTransformer, paths:AttributeDict, imsize:tuple):
+
+    ca = torch.load(paths.model_path)
+
+    write_video(ca, transformer, paths, imsize)
 
 
 

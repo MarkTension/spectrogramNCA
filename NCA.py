@@ -33,12 +33,13 @@ class CA(torch.nn.Module):
     """ the cellular automata class.
     """
 
-    def __init__(self, chn=12, hidden_n=96):
+    def __init__(self, chn=12, hidden_n=96, living_mask=False):
         super().__init__()
         self.chn = chn
         self.w1 = torch.nn.Conv2d(chn*4, hidden_n, 1)
         self.w2 = torch.nn.Conv2d(hidden_n, chn, 1, bias=False)
         self.w2.weight.data.zero_()
+        self.living_mask = living_mask
 
     def forward(self, x, update_rate=0.5):
         """_summary_
@@ -56,10 +57,11 @@ class CA(torch.nn.Module):
 
         udpate_mask = (torch.rand(b, 1, h, w)+update_rate).floor()
         
-        living_mask = get_living_mask(x) #& get_living_mask(y)
+        if self.living_mask:
+            udpate_mask = udpate_mask * get_living_mask(x)
         # post_mask = get_living_mask(y)  
 
-        return x + y * (udpate_mask * living_mask)
+        return x + y * udpate_mask
 
     def seed(self, n:int, sz_w=256, sz_h=256):
         """initiates the sample pool with black pixel state.

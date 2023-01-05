@@ -78,7 +78,6 @@ class StftTransformer:
             complex_coords, hop_length=self.hop_length, window='hann')
         if (outfile_path != None):
             sf.write(outfile_path, audio_array, self.rate, subtype='PCM_24')
-            print(f"saved the audio file to {outfile_path}")
 
         # sets the audio out (array) instance variable from the saved file
         self.audio_out = AudioSegment.from_wav(outfile_path)
@@ -144,7 +143,7 @@ class StftTransformer:
 
 
         # # TODO: remove this. temporary time contraint
-        # self.complex_coords = self.complex_coords[:,:256]
+        self.complex_coords = self.complex_coords[:,:500]
 
         # cutoff a set of frequencies to add again later
         if (self.freq_bin_cutoff != None):
