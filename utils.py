@@ -7,6 +7,8 @@ import numpy as np
 import matplotlib.pylab as pl
 import librosa
 import yaml
+from datetime import datetime
+
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
@@ -25,6 +27,44 @@ def load_config(path):
 def write_config(path, config):
     with open(os.path.join(path, "config.yaml"), "w") as file:
         config = yaml.dump(dict(config), file)
+
+
+def set_paths(sound_name, load_model_path):
+    "puts all the paths in a dict and makes directories"
+    time = datetime.now().strftime("%m%d_%H%M%S")
+    if load_model_path is None:
+        experiment_root = os.path.join("experiments", time)
+    else:
+        experiment_root = os.path.join("experiments", load_model_path)
+    nca_results = os.path.join(experiment_root, "nca_results")
+    audio_dir = os.path.join(nca_results, f"audio_output_{time}")
+    nca_training_dir = os.path.join(nca_results, "training")
+
+
+    paths = {
+        "experiment" : experiment_root,
+        "nca_results" : nca_results,
+        "model_path" : os.path.join(experiment_root, "model.pkl"),
+        "nca_video": os.path.join(nca_results, f"video_output_{time}.mp4"),
+        "nca_audio_dir": audio_dir,
+        "nca_results_training": nca_training_dir,
+        "input_wav" : os.path.join("samples", f"{sound_name}.wav"),
+        "reconstructed_wav" : os.path.join(experiment_root, f"{sound_name}_reconstruced.wav"),
+        "spectrogram" : os.path.join(experiment_root, f"{sound_name}_spect.png"),
+        "complex_coords" : os.path.join(experiment_root, f"{sound_name}_complex_coords.png"),
+    }
+    if os.path.exists(experiment_root):
+        # always make new video and audio directories
+        os.mkdir(audio_dir)
+        return AttributeDict(paths)
+
+    os.mkdir(experiment_root)
+    os.mkdir(nca_results)
+    os.mkdir(nca_training_dir)
+    os.mkdir(audio_dir)
+
+    return AttributeDict(paths)
+
 
 
 def plot_spectrogram(spectrogram_path:str, amplitudes:np.array):

@@ -22,7 +22,7 @@ from torch.nn import MSELoss
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
+# torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
 vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
@@ -155,7 +155,7 @@ def train(image, paths: AttributeDict, transformer:StftTransformer, config:Attri
                 plot_progress(loss_log, paths, x, i)
 
     print('done training')
-    write_video(ca=ca, transformer=transformer, paths=paths, imsize=imsize)
+    do_inference(ca=ca, transformer=transformer, paths=paths, imsize=imsize)
 
     # save model
     torch.save(ca.state_dict(), paths.model_path)
@@ -201,11 +201,19 @@ def sample(transformer:StftTransformer, paths:AttributeDict, imsize:tuple):
 
     ca = torch.load(paths.model_path)
 
-    write_video(ca, transformer, paths, imsize)
+    do_inference(ca, transformer, paths, imsize)
 
 
 
-def write_video(ca: CA, transformer:StftTransformer, paths:AttributeDict, imsize:tuple):
+def do_inference(ca: CA, transformer:StftTransformer, paths:AttributeDict, imsize:tuple):
+    """ Do inference on trained ca model. transforms output to one video and multiple audio files.
+
+    Args:
+        ca (CA): trained CA model
+        transformer (StftTransformer): transforms spectrogram to audio
+        paths (AttributeDict): paths for writing files
+        imsize (tuple): dimensions of image
+    """
     with VideoWriter(filename=paths.nca_video) as vid, torch.no_grad():
         x = ca.seed(n=1, sz_w=imsize[0], sz_h=imsize[1])
         for k in tqdm(range(300), leave=False):
@@ -217,11 +225,9 @@ def write_video(ca: CA, transformer:StftTransformer, paths:AttributeDict, imsize
             # vid.add(zoom(img, 2))
             vid.add(img)
 
-            recon_complex_numbers = transformer.inverse_convert_complex(img[:,:,:2])
-            transformer.complex_coords = recon_complex_numbers
-            outname = f"{paths.nca_audio[:-4]}_{k}_{paths.nca_audio[-4:]}"
-            transformer.complex_to_audio(outname)
+            wav_path = os.path.join(paths.nca_audio_dir, f"spect_{k}.wav")
+            transformer.complex_to_audio(img[:,:,:2], wav_path)
 
             del img
 
-    print('done video')
+    print('done with inference')
