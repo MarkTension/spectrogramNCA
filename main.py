@@ -13,6 +13,7 @@ some things to do
 TODO: for audio reconstruction, clip amplitudes above a certain threshold.
 TODO: auto-generate audio sequence
 TODO: integrate new loss function with style loss function
+TODO: just train for 50 steps with texture and alive masking
 """
 
 class Experiment(Enum):

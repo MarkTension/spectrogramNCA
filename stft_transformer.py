@@ -11,6 +11,7 @@ from pickle import dump
 import os
 import numpy as np
 
+
 class Truncater():
     """truncates the complex numbers' frequency bins, and saves the residue for later use"""
 
@@ -30,16 +31,12 @@ class Truncater():
         return self._truncated
 
 
-
-
-
-
 class StftTransformer:
     """
     class is responsible to convert an audio to and from complex numbers.
-    """    
+    """
 
-    def __init__(self, n_fft:int, rate:int, audio_array:np.array, paths: AttributeDict, sample_len:int, freq_bin_cutoff: int = None, method='cqt'):
+    def __init__(self, n_fft: int, rate: int, audio_array: np.array, paths: AttributeDict, sample_len: int, freq_bin_cutoff: int = None, method='cqt'):
         """ initializes class. Converts audio array to complex values. Plots spectrogram.
 
         Args:
@@ -50,7 +47,7 @@ class StftTransformer:
             sample_len (int): _description_
             freq_bin_cutoff (int, optional): _description_. Defaults to None.
             method (str, optional): _description_. Defaults to 'cqt'.
-        """        
+        """
         self.experiment_path = paths.experiment     # root of our experiment
         self.paths = paths
         self.rate = rate
@@ -70,14 +67,13 @@ class StftTransformer:
         self.complex_coords = self._convert_complex(complex_coords)
         plot_spectrogram(paths.spectrogram, amplitudes)
 
-
     def _audio_to_complex(self, audio_array: np.array):
         """sets the complex coordinates and amplitudes instance variable from the audio array"""
         complex_coords = self.transformer(
             audio_array, hop_length=self.hop_length, window='hann')
         return complex_coords, np.abs(complex_coords)
 
-    def complex_to_audio(self, complex_coords:np.array, outfile_path=None):
+    def complex_to_audio(self, complex_coords: np.array, outfile_path=None):
         """
         inverse short term fourrier transform for audio file reconstruction from complex coordinates.
         saves audiofile if path is provided
@@ -133,7 +129,7 @@ class StftTransformer:
         Returns:
             complex_values (np.array): complex numbers that are ready for inverse-stft
         """
-        
+
         # invert the minmax
         real = self.scalers['real'].inverse_transform(
             complex_converted[:, :, 0])
@@ -147,7 +143,8 @@ class StftTransformer:
 
     def _complex_to_png(self, real_transf, imag_transf, mask, complex_coords_transf):
         # write to file
-        imageio.imwrite(uri=self.paths.complex_coords, im=complex_coords_transf)
+        imageio.imwrite(uri=self.paths.complex_coords,
+                        im=complex_coords_transf)
         imageio.imwrite(uri=os.path.join(self.experiment_path,
                         "real_scaled.png"), im=real_transf*mask)
         imageio.imwrite(uri=os.path.join(self.experiment_path,
@@ -159,17 +156,17 @@ class StftTransformer:
         Conversion to ML-friendly format: truncates freq bins for memory, log-scales + normalizes them
         """
         # TODO: remove this. temporary time contraint
-        complex_coords = complex_coords[:,:500]
+        complex_coords = complex_coords[:, :500]
 
         # truncate a set of frequencies to add again later
         if (self.freq_bin_cutoff != None):
             self.truncater = Truncater(
                 complex_coords, self.freq_bin_cutoff)
             complex_coords = self.truncater.truncated
-        
-        # transform to 
+
+        # transform to
         real_transf, imag_transf = self._transform_complex(complex_coords)
-        
+
         # stack to save it as a .png
         complex_coords_transf = np.stack(
             [real_transf, imag_transf, np.zeros_like(real_transf)], axis=2)
@@ -179,5 +176,6 @@ class StftTransformer:
         complex_coords_transf = complex_coords_transf * \
             np.expand_dims(mask, axis=-1)
 
-        self._complex_to_png(real_transf, imag_transf, mask, complex_coords_transf)
+        self._complex_to_png(real_transf, imag_transf,
+                             mask, complex_coords_transf)
         return complex_coords_transf

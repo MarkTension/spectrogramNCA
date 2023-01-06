@@ -22,7 +22,7 @@ from torch.nn import MSELoss
 
 os.environ['FFMPEG_BINARY'] = 'ffmpeg'
 
-# torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 # import vgg model
 vgg16 = models.vgg16(weights='IMAGENET1K_V1').features.float()
@@ -199,7 +199,9 @@ def train_step(pool, i, ca, gradient_checkpoints, loss_f, opt, lr_sched, loss_lo
 
 def sample(transformer:StftTransformer, paths:AttributeDict, imsize:tuple):
 
-    ca = torch.load(paths.model_path)
+    # ca = torch.load(paths.model_path)
+    ca = CA()
+    ca.load_state_dict(torch.load(paths.model_path))
 
     do_inference(ca, transformer, paths, imsize)
 
@@ -216,7 +218,7 @@ def do_inference(ca: CA, transformer:StftTransformer, paths:AttributeDict, imsiz
     """
     with VideoWriter(filename=paths.nca_video) as vid, torch.no_grad():
         x = ca.seed(n=1, sz_w=imsize[0], sz_h=imsize[1])
-        for k in tqdm(range(300), leave=False):
+        for k in tqdm(range(500), leave=False): # was 300
             step_n = min(2**(k//30), 8)
             for _ in range(step_n):
                 x[:] = ca(x)

@@ -6,6 +6,6 @@ n_fft : 1000                      # 2000
 experiment : Experiment.COMPLEX
 sound_name : "texture1"           #"808_cowbell_48k" #"kicksnare" #'drum' #'texture1' #"bellPlate"
 freq_bin_cutoff : None            # 256
-load_model_path : None # "0105_152710"     # None            # set to the experiment id (the datetime string) to load a previous model
+load_model_path : None # "0106_152545" # None # "0105_152710"     # None            # set to the experiment id (the datetime string) to load a previous model
 
-num_train_steps : 100             # 2000
+num_train_steps : 200             # 2000

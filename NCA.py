@@ -1,6 +1,6 @@
 import torch
 
-# torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 
 ident = torch.tensor([[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 0.0]])
@@ -33,7 +33,7 @@ class CA(torch.nn.Module):
     """ the cellular automata class.
     """
 
-    def __init__(self, chn=12, hidden_n=96, living_mask=False):
+    def __init__(self, chn=12, hidden_n=96, living_mask=True):
         super().__init__()
         self.chn = chn
         self.w1 = torch.nn.Conv2d(chn*4, hidden_n, 1)
@@ -42,7 +42,7 @@ class CA(torch.nn.Module):
         self.living_mask = living_mask
 
     def forward(self, x, update_rate=0.5):
-        """_summary_
+        """ forwards the input to the model
 
         Args:
             x (tensor): current state
